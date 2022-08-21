@@ -1,28 +1,46 @@
-# .github/workflows/release.yaml
+name: golang-pipeline
 on: push
-
 jobs:
-  releases-matrix:
-    name: Release Go Binary
+  build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        # build and publish in parallel: linux/386, linux/amd64, linux/arm64, windows/386, windows/amd64, darwin/amd64, darwin/arm64
-        goos: [linux, windows, darwin]
-        goarch: ["386", amd64, arm64]
-        exclude:
-          - goarch: "386"
-            goos: darwin
-          - goarch: arm64
-            goos: windows
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags')
     steps:
-    - uses: actions/checkout@v3
-    - uses: wangyoucao577/go-release-action@v1.30
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        goos: ${{ matrix.goos }}
-        goarch: ${{ matrix.goarch }}
-        goversion: "https://dl.google.com/go/go1.13.1.linux-amd64.tar.gz"
-        project_path: "build"
-        binary_name: "depoch"
-        extra_files: LICENSE README.md
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: go Build
+        run: |
+          go mod download
+          go build -o depoch main.go
+        env:
+          EXTRA_FILES: "LICENSE"
+
+      - name: Create Release
+        id: create_release
+        uses: go-semantic-release/action@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          force-bump-patch-version: "true"
+          changelog-generator-opt: "emojis=true"
+
+
+      - name: Gets latest created release info
+        id: latest_release_info
+        uses: jossef/action-latest-release-info@v1.1.0
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.latest_release_info.outputs.upload_url }}
+          # This pulls from the CREATE RELEASE step above,
+          # referencing it's ID to get its outputs object,
+          # which include a `upload_url`.
+          # See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          asset_path: depoch
+          asset_name: depoch
+          asset_content_type: application/zip
