@@ -23,6 +23,8 @@ jobs:
           force-bump-patch-version: "true"
           changelog-generator-opt: "emojis=true"
 
+      - name: delayInject
+        run: sleep 5
 
       - name: Gets latest created release info
         id: latest_release_info
