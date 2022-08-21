@@ -10,7 +10,7 @@ jobs:
 
       - name: go Build
         run: |
-          go mod download
+          #go mod download
           go build -o depoch main.go
         env:
           EXTRA_FILES: "LICENSE"
